@@ -16,7 +16,7 @@ import os
 import shutil
 
 # Global variable to keep track of the current DB in use
-GlobalCurrentDirectory = ""
+GlobalCurrentDirectory = "CS457_PA4"
 
 # A class to handle the metadata manipulation,
 # By calling GenerateMetadataObject func, the object will have parsed the
@@ -232,25 +232,32 @@ def BeginTranscationCommand():
         
         try:
             LineInputCommand = str(input("Transaction--> "))
+            CommitCommand = re.search(r'(?i)commit\s*;', LineInputCommand)
         except:
             print("Invalid Input Please Try again")
 
 
-        while LineInputCommand.lower() != "commit;" :
+        while not CommitCommand  :
                 if LineInputCommand.endswith(';'):
                     LineInputCommand = LineInputCommand.replace('\t', '')
-                    ProcessTransactionCommand(LineInputCommand)
+                    CommitCommand = re.search(r'(?i)\s*commit\s*;', LineInputCommand)
+                    
+                    if CommitCommand :
+                        break
+                    else :
+                        ProcessTransactionCommand(LineInputCommand)
+
                     LineInputCommand = ''
                 while not LineInputCommand.endswith(';'):
                     tempInput = str(input("Transaction--> "))
-                    if tempInput.lower() == 'commit ;':
-                        LineInputCommand = 'commit;'
+                    CommitCommand = re.search(r'(?i)\s*commit\s*;', tempInput)
+                    if CommitCommand :
                         break
                     else:
                         LineInputCommand = LineInputCommand  + ' ' + tempInput
 
 
-        if LineInputCommand == "commit;" :
+        if CommitCommand :
             print("Transaction committed.")
 
 # ----------------------------------------------------------------------------
@@ -260,7 +267,21 @@ def BeginTranscationCommand():
 
 
 def ProcessTransactionCommand(commandLine):
-     print("Execute : " + commandLine)
+    argumentErrorMessage = "!Failed a syntax error occured"
+    commandLine = ParseCommandByWord(commandLine)
+    
+    # If the first keyword is create
+    if commandLine[0].lower() == "update" :
+        # Check the remaining ones and execute or display an error if invalid
+        try:
+            print("Updating table : " + commandLine[1])
+        except:
+            print(argumentErrorMessage)
+    
+    # If the first keyword was not recognized above display an error
+    else:
+        print("!Failed command : '" + commandLine[0] + "' not recognized")
+
     
 
 # ----------------------------------------------------------------------------
