@@ -18,6 +18,12 @@ import shutil
 # Global variable to keep track of the current DB in use
 GlobalCurrentDirectory = "CS457_PA4"
 
+# A class to handle tableLocking metadata manipulation,
+class TableLock:
+  def __init__(self, tablename, CanAccess):
+    self.tablename = tablename
+    self.CanAccess = CanAccess
+
 # A class to handle the metadata manipulation,
 # By calling GenerateMetadataObject func, the object will have parsed the
 # Metadata names and datatypes, while also providing indexes to maniuplate
@@ -222,6 +228,7 @@ def ExecuteCommand(commandLine):
 
 
 def BeginTranscationCommand():
+    global GlobalCurrentDirectory
 
     if not GlobalCurrentDirectory:
             print("!Failed a database is currently not in use")
@@ -229,6 +236,9 @@ def BeginTranscationCommand():
     else :
 
         print("Transaction starts.")
+
+        #Create a TableLock object with access set to False as we do not know what table yet
+        currentLockedTable = TableLock("", False)
         
         try:
             LineInputCommand = str(input("Transaction--> "))
@@ -236,7 +246,7 @@ def BeginTranscationCommand():
         except:
             print("Invalid Input Please Try again")
 
-
+        #Continue processing transaction until commit;
         while not CommitCommand  :
                 if LineInputCommand.endswith(';'):
                     LineInputCommand = LineInputCommand.replace('\t', '')
@@ -245,8 +255,9 @@ def BeginTranscationCommand():
                     if CommitCommand :
                         break
                     else :
-                        ProcessTransactionCommand(LineInputCommand)
-
+                        #Process Transaction command here
+                        currentLockedTable = ProcessTransactionCommand(LineInputCommand, currentLockedTable)
+ 
                     LineInputCommand = ''
                 while not LineInputCommand.endswith(';'):
                     tempInput = str(input("Transaction--> "))
@@ -259,28 +270,74 @@ def BeginTranscationCommand():
 
         if CommitCommand :
             print("Transaction committed.")
+            print("Merging Table " + currentLockedTable.tablename)
 
 # ----------------------------------------------------------------------------
 # FUNCTION NAME:     ProcessTransactionCommand(commandsList)
-# PURPOSE:           This function process lines entered during a transaction
+# PURPOSE:           This function process command lines entered during a transaction
 # -----------------------------------------------------------------------------
 
 
-def ProcessTransactionCommand(commandLine):
+def ProcessTransactionCommand(commandLine, currentLockedTable):
+
     argumentErrorMessage = "!Failed a syntax error occured"
+    OGcommandLine = commandLine
     commandLine = ParseCommandByWord(commandLine)
     
-    # If the first keyword is create
+    # If the first keyword command is update
     if commandLine[0].lower() == "update" :
-        # Check the remaining ones and execute or display an error if invalid
         try:
-            print("Updating table : " + commandLine[1])
+            #Process update command
+           currentLockedTable = UpdateTransactionCommand(OGcommandLine, currentLockedTable)
+           return currentLockedTable
         except:
             print(argumentErrorMessage)
     
     # If the first keyword was not recognized above display an error
     else:
         print("!Failed command : '" + commandLine[0] + "' not recognized")
+
+    return currentLockedTable
+
+# ----------------------------------------------------------------------------
+# FUNCTION NAME:     UpdateTransactionCommand(OGcommandLine)
+# PURPOSE:           This function executes the update command for transactions
+# -----------------------------------------------------------------------------
+
+
+def UpdateTransactionCommand(commandLine, currentLockedTable):
+    
+    UpdateCommand = re.search(r'(?i)update\s*(\w*)\s*set\s*(.*?)\s*where\s*(.*?)\s*;', commandLine)
+
+    if UpdateCommand:
+        updateTableName = UpdateCommand.group(1).lower()
+        currentLockedTable.tablename = updateTableName
+
+
+
+        # Check if the table/file exists
+        lockTableName = currentLockedTable.tablename + "_lock"
+        if not os.path.exists(GlobalCurrentDirectory + "/" + lockTableName) or currentLockedTable.CanAccess == True :
+            
+            if currentLockedTable.CanAccess == False :
+                file = open(GlobalCurrentDirectory + "/" + lockTableName, "w")
+                print("LockCreated : " + lockTableName)
+                currentLockedTable.CanAccess = True
+                file.close()
+            else :
+                print("Lock Already Created : " + lockTableName)
+
+        else :
+            print("Error: Table "+ updateTableName + " is locked!")
+
+
+
+    else:
+        print('!Failed Update arguments not recognized')
+
+    return currentLockedTable
+
+    
 
     
 
