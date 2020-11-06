@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             //"args":["<","PA3_test.sql"],
-            //"args":["<","test.sql"],
+            "args":["<","test.sql"],
             "console": "integratedTerminal"
         }
     ]

@@ -1,17 +1,13 @@
 # -----------------------------------------------------------------------------
 # FILE NAME:         aalarconbojorquez_pa.py
-# USAGE:             python3 aalarconbojorquez_pa.py < PA3_test.sql
-# NOTES:             Runs using the standards file input {filename} < PA3_test.sql
+# USAGE:             python3 aalarconbojorquez_pa.py 
+# NOTES:             Runs using the standards file input python3 aalarconbojorquez_pa.py < PA4_test.sql
 #                    or line by line input python3 aalarconbojorquez_pa.py
 #
 # MODIFICATION HISTORY:
 # Author             Date           Modification(s)
 # ----------------   -----------    ---------------
-# Andy Alarcon       2020-10-28     1.0 ... Setup environment using prior submission,
-#                                           Implemented parser for join commands
-# Andy Alarcon       2020-10-29     1.1 ... Implemented inner join operation
-# Andy Alarcon       2020-10-30     1.2 ... Implemented left outer join operation
-# Andy Alarcon       2020-10-31     1.3 ... Fixed a parsing bug
+# Andy Alarcon       2020-11-06     1.0 ... Setup environment using prior submission
 # -----------------------------------------------------------------------------
 
 import sys
@@ -86,7 +82,6 @@ def main():
                     LineInputCommand = LineInputCommand + ' ' + tempInput
 
     print("All done.")
-
 
 # ----------------------------------------------------------------------------
 # FUNCTION NAME:     ExecuteCommand(str)
@@ -204,11 +199,69 @@ def ExecuteCommand(commandLine):
                     print("!Failed INSERT command argumments not recognized")
             except:
                 print(argumentErrorMessage)
+        
+        # IF the first keyword is insert
+        elif commandLine[0].lower() == "begin":
+            # Check the remaining ones and execute or display an error
+            try:
+                if commandLine[1].lower() == "transaction":
+                    BeginTranscationCommand()
+                else:
+                    print("!Failed Transaction command argumments not recognized")
+            except:
+                print(argumentErrorMessage)
 
         # If the first keyword was not recognized above display an error
         else:
             print("!Failed command : '" + commandLine[0] + "' not recognized")
 
+# ----------------------------------------------------------------------------
+# FUNCTION NAME:     TranscationCommand()
+# PURPOSE:           This function executes the begin transaction command 
+# -----------------------------------------------------------------------------
+
+
+def BeginTranscationCommand():
+
+    if not GlobalCurrentDirectory:
+            print("!Failed a database is currently not in use")
+        
+    else :
+
+        print("Transaction starts.")
+        
+        try:
+            LineInputCommand = str(input("Transaction--> "))
+        except:
+            print("Invalid Input Please Try again")
+
+
+        while LineInputCommand.lower() != "commit;" :
+                if LineInputCommand.endswith(';'):
+                    LineInputCommand = LineInputCommand.replace('\t', '')
+                    ProcessTransactionCommand(LineInputCommand)
+                    LineInputCommand = ''
+                while not LineInputCommand.endswith(';'):
+                    tempInput = str(input("Transaction--> "))
+                    if tempInput.lower() == 'commit ;':
+                        LineInputCommand = 'commit;'
+                        break
+                    else:
+                        LineInputCommand = LineInputCommand  + ' ' + tempInput
+
+
+        if LineInputCommand == "commit;" :
+            print("Transaction committed.")
+
+# ----------------------------------------------------------------------------
+# FUNCTION NAME:     ProcessTransactionCommand(commandsList)
+# PURPOSE:           This function process lines entered during a transaction
+# -----------------------------------------------------------------------------
+
+
+def ProcessTransactionCommand(commandLine):
+     print("Execute : " + commandLine)
+    
 
 # ----------------------------------------------------------------------------
 # FUNCTION NAME:     SelectCommandWithJoins(commandsList)
