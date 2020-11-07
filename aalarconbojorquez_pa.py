@@ -191,7 +191,7 @@ def ExecuteCommand(commandLine):
         elif commandLine[0].lower() == "update":
             # Check the remaining ones and execute or display an error
             try:
-                UpdateCommand(unalteredCommandLine)
+                UpdateCommand(unalteredCommandLine, False)
             except:
                 print(argumentErrorMessage)
 
@@ -307,30 +307,42 @@ def ProcessTransactionCommand(commandLine, currentLockedTable):
 
 def UpdateTransactionCommand(commandLine, currentLockedTable):
     
-    UpdateCommand = re.search(r'(?i)update\s*(\w*)\s*set\s*(.*?)\s*where\s*(.*?)\s*;', commandLine)
+    UpdateCommandRE = re.search(r'(?i)update\s*(\w*)\s*set\s*(.*?)\s*where\s*(.*?)\s*;', commandLine)
 
-    if UpdateCommand:
-        updateTableName = UpdateCommand.group(1).lower()
-        currentLockedTable.tablename = updateTableName
+    if UpdateCommandRE:
+        updateTableName = UpdateCommandRE.group(1).lower()
 
-
-
-        # Check if the table/file exists
-        lockTableName = currentLockedTable.tablename + "_lock"
-        if not os.path.exists(GlobalCurrentDirectory + "/" + lockTableName) or currentLockedTable.CanAccess == True :
-            
-            if currentLockedTable.CanAccess == False :
-                file = open(GlobalCurrentDirectory + "/" + lockTableName, "w")
-                print("LockCreated : " + lockTableName)
-                currentLockedTable.CanAccess = True
-                file.close()
-            else :
-                print("Lock Already Created : " + lockTableName)
-
+        #Check if the current used table is the same as the one in the input line
+        if (currentLockedTable.tablename != updateTableName) and (currentLockedTable.tablename != '') :
+            print("Error : Only one table (" + currentLockedTable.tablename + ") can be used per transaction. Please commit and use another table.")
         else :
-            print("Error: Table "+ updateTableName + " is locked!")
+
+            currentLockedTable.tablename = updateTableName
+
+            # Check if the current table lock exists
+            lockTableName = currentLockedTable.tablename + "_lock"
+            if not os.path.exists(GlobalCurrentDirectory + "/" + lockTableName) or currentLockedTable.CanAccess == True :
+                
+                #If we are not currently using a locked table, we create one
+                if currentLockedTable.CanAccess == False :
+
+                    shutil.copyfile(GlobalCurrentDirectory + "/" + updateTableName, GlobalCurrentDirectory + "/" + lockTableName)
+                    print("LockCreated : " + lockTableName)
+                    currentLockedTable.CanAccess = True
+
+                    commandLineTableReplaced = commandLine.replace(currentLockedTable.tablename, lockTableName)
+                    UpdateCommand(commandLineTableReplaced, True)
 
 
+
+                    #If it already exists and we are currently using it (creator)
+                else :
+                    print("Lock Already Created : " + lockTableName)
+                    commandLineTableReplaced = commandLine.replace(currentLockedTable.tablename, lockTableName)
+                    UpdateCommand(commandLineTableReplaced, True)
+
+            else :
+                print("Error: Table "+ updateTableName + " is locked!")
 
     else:
         print('!Failed Update arguments not recognized')
@@ -589,12 +601,12 @@ def getInnerJoinTableList(Table1IndexList, Table2IndexList, Table1TDFLs, Table2T
 
 
 # ----------------------------------------------------------------------------
-# FUNCTION NAME:     UpdateCommand(commandsList)
+# FUNCTION NAME:     UpdateCommand(commandsList, isTransaction)
 # PURPOSE:           This function executes the update command
 # -----------------------------------------------------------------------------
 
 
-def UpdateCommand(commandLine):
+def UpdateCommand(commandLine, isTransaction):
     global GlobalCurrentDirectory
 
     # Check if the command has the format
@@ -670,9 +682,10 @@ def UpdateCommand(commandLine):
                 updatedTableData = getNewTableListUpdate(SetIndexList, WhereIndexList, TableDataFileLines,
                                                          updateSetConditonList, updateWhereConditonList)
 
+            
                 # In order to clear the file and write to it, open in write mode
                 file = open(GlobalCurrentDirectory +
-                            "/" + updateTableName, "w")
+                        "/" + updateTableName, "w")
 
                 # No data has been returned, do not add a new line
                 if len(updatedTableData) == 1:
