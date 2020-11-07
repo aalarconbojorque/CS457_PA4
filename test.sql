@@ -13,7 +13,7 @@ test;
 commit;
 .exit
 update mango set status = 1 where seat = 22;
-update flights set status = 1 where seat = 23;
+update flights set status = 1 where seat = 22;
 
 update flights set status = 0 where seat = 22;
 update flights set status = 0 where seat = 23;

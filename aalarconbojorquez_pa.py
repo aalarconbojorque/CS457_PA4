@@ -20,9 +20,10 @@ GlobalCurrentDirectory = "CS457_PA4"
 
 # A class to handle tableLocking metadata manipulation,
 class TableLock:
-  def __init__(self, tablename, CanAccess):
+  def __init__(self, tablename, CanAccess, dataModifed):
     self.tablename = tablename
     self.CanAccess = CanAccess
+    self.dataModifed = dataModifed
 
 # A class to handle the metadata manipulation,
 # By calling GenerateMetadataObject func, the object will have parsed the
@@ -238,7 +239,7 @@ def BeginTranscationCommand():
         print("Transaction starts.")
 
         #Create a TableLock object with access set to False as we do not know what table yet
-        currentLockedTable = TableLock("", False)
+        currentLockedTable = TableLock("", False, False)
         
         try:
             LineInputCommand = str(input("Transaction--> "))
@@ -269,8 +270,26 @@ def BeginTranscationCommand():
 
 
         if CommitCommand :
-            print("Transaction committed.")
-            print("Merging Table " + currentLockedTable.tablename)
+
+            if currentLockedTable.dataModifed == True :
+                directoryPath = GlobalCurrentDirectory + "/"
+                tblname = currentLockedTable.tablename
+                locktblname = tblname + "_lock"
+                deletetblname = tblname + "D"
+                
+                #Rename the table to tableD
+                os.rename(directoryPath + tblname, directoryPath + deletetblname)
+
+                #Rename table_locks to table
+                os.rename(directoryPath + locktblname, directoryPath + tblname)
+
+                #Delete tableD
+                os.remove(directoryPath + deletetblname)
+
+                print("Transaction committed.")
+
+            else : 
+                print("Transaction abort.")
 
 # ----------------------------------------------------------------------------
 # FUNCTION NAME:     ProcessTransactionCommand(commandsList)
@@ -310,39 +329,58 @@ def UpdateTransactionCommand(commandLine, currentLockedTable):
     UpdateCommandRE = re.search(r'(?i)update\s*(\w*)\s*set\s*(.*?)\s*where\s*(.*?)\s*;', commandLine)
 
     if UpdateCommandRE:
+        
         updateTableName = UpdateCommandRE.group(1).lower()
 
-        #Check if the current used table is the same as the one in the input line
-        if (currentLockedTable.tablename != updateTableName) and (currentLockedTable.tablename != '') :
-            print("Error : Only one table (" + currentLockedTable.tablename + ") can be used per transaction. Please commit and use another table.")
-        else :
+         # Check if the table/file exists
+        if os.path.exists(GlobalCurrentDirectory + "/" + updateTableName):
 
-            currentLockedTable.tablename = updateTableName
-
-            # Check if the current table lock exists
-            lockTableName = currentLockedTable.tablename + "_lock"
-            if not os.path.exists(GlobalCurrentDirectory + "/" + lockTableName) or currentLockedTable.CanAccess == True :
-                
-                #If we are not currently using a locked table, we create one
-                if currentLockedTable.CanAccess == False :
-
-                    shutil.copyfile(GlobalCurrentDirectory + "/" + updateTableName, GlobalCurrentDirectory + "/" + lockTableName)
-                    print("LockCreated : " + lockTableName)
-                    currentLockedTable.CanAccess = True
-
-                    commandLineTableReplaced = commandLine.replace(currentLockedTable.tablename, lockTableName)
-                    UpdateCommand(commandLineTableReplaced, True)
-
-
-
-                    #If it already exists and we are currently using it (creator)
-                else :
-                    print("Lock Already Created : " + lockTableName)
-                    commandLineTableReplaced = commandLine.replace(currentLockedTable.tablename, lockTableName)
-                    UpdateCommand(commandLineTableReplaced, True)
-
+            #Check if the current used table is the same as the one in the input line
+            if (currentLockedTable.tablename != updateTableName) and (currentLockedTable.tablename != '') :
+                print("Error : Only one table (" + currentLockedTable.tablename + ") can be used per transaction. Please commit and use another table.")
             else :
-                print("Error: Table "+ updateTableName + " is locked!")
+
+                currentLockedTable.tablename = updateTableName
+
+                # Check if the current table lock exists
+                lockTableName = currentLockedTable.tablename + "_lock"
+                if not os.path.exists(GlobalCurrentDirectory + "/" + lockTableName) or currentLockedTable.CanAccess == True :
+                    
+                    #If we are not currently using a locked table, we create one
+                    if currentLockedTable.CanAccess == False :
+
+                        # Create a copy of the current table we want to modify but add _lock to the name
+                        shutil.copyfile(GlobalCurrentDirectory + "/" + updateTableName, GlobalCurrentDirectory + "/" + lockTableName)
+                        print("LockCreated : " + lockTableName)
+
+                        # Set table access to True if we want to further modify it
+                        currentLockedTable.CanAccess = True
+
+                        #Replace the table name with tablename_lock to modify the data
+                        commandLineTableReplaced = commandLine.replace(currentLockedTable.tablename, lockTableName)
+
+                        #Call update command
+                        UpdateCommand(commandLineTableReplaced, True)
+
+                        currentLockedTable.dataModifed = True
+
+                    
+                    #If it already exists and we are currently using it (creator)
+                    else :
+                        print("Lock Already Created : " + lockTableName)
+
+                        #Replace the table name with tablename_lock to modify the data
+                        commandLineTableReplaced = commandLine.replace(currentLockedTable.tablename, lockTableName)
+
+                        #Call update command
+                        UpdateCommand(commandLineTableReplaced, True)
+
+                        currentLockedTable.dataModifed = True
+
+                else :
+                    print("Error : Table "+ updateTableName + " is locked!")
+        else :
+            print("Error : Table " + updateTableName + " does not exist.")
 
     else:
         print('!Failed Update arguments not recognized')
