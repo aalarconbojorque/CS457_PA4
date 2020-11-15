@@ -244,36 +244,17 @@ def BeginTranscationCommand():
 
         #Create a TableLock object with access set to False as we do not know what table yet
         currentLockedTable = TableLock("", False, False)
-        
-        try:
-            LineInputCommand = str(input("Transaction--> "))
-            CommitCommand = re.search(r'(?i)commit\s*;', LineInputCommand)
-        except:
-            print("Invalid Input Please Try again")
 
-        #Continue processing transaction until commit;
-        while not CommitCommand  :
-                if LineInputCommand.endswith(';'):
-                    LineInputCommand = LineInputCommand.replace('\t', '')
-                    CommitCommand = re.search(r'(?i)\s*commit\s*;', LineInputCommand)
-                    
-                    if CommitCommand :
-                        break
-                    else :
-                        #Process Transaction command here
-                        currentLockedTable = ProcessTransactionCommand(LineInputCommand, currentLockedTable)
- 
-                    LineInputCommand = ''
-                while not LineInputCommand.endswith(';'):
-                    tempInput = str(input("Transaction--> "))
-                    CommitCommand = re.search(r'(?i)\s*commit\s*;', tempInput)
-                    if CommitCommand :
-                        break
-                    else:
-                        LineInputCommand = LineInputCommand  + ' ' + tempInput
-
-
-        if CommitCommand :
+        #Check if standard input is active
+        global StandardInputisActive
+        if StandardInputisActive :          
+            global CommandsList
+            CommandsList.pop(0)
+            while CommandsList[0].lower() != "commit;":
+                LineInputCommand = CommandsList[0]
+                currentLockedTable = ProcessTransactionCommand(LineInputCommand, currentLockedTable)
+                CommandsList.pop(0)
+            
 
             if currentLockedTable.dataModifed == True :
                 directoryPath = GlobalCurrentDirectory + "/"
@@ -294,6 +275,57 @@ def BeginTranscationCommand():
 
             else : 
                 print("Transaction abort.")
+        
+        else :
+            try:
+                LineInputCommand = str(input("Transaction--> "))
+                CommitCommand = re.search(r'(?i)commit\s*;', LineInputCommand)
+            except:
+                print("Invalid Input Please Try again")
+
+            #Continue processing transaction until commit;
+            while not CommitCommand  :
+                    if LineInputCommand.endswith(';'):
+                        LineInputCommand = LineInputCommand.replace('\t', '')
+                        CommitCommand = re.search(r'(?i)\s*commit\s*;', LineInputCommand)
+                        
+                        if CommitCommand :
+                            break
+                        else :
+                            #Process Transaction command here
+                            currentLockedTable = ProcessTransactionCommand(LineInputCommand, currentLockedTable)
+    
+                        LineInputCommand = ''
+                    while not LineInputCommand.endswith(';'):
+                        tempInput = str(input("Transaction--> "))
+                        CommitCommand = re.search(r'(?i)\s*commit\s*;', tempInput)
+                        if CommitCommand :
+                            break
+                        else:
+                            LineInputCommand = LineInputCommand  + ' ' + tempInput
+
+
+            if CommitCommand :
+
+                if currentLockedTable.dataModifed == True :
+                    directoryPath = GlobalCurrentDirectory + "/"
+                    tblname = currentLockedTable.tablename
+                    locktblname = tblname + "_lock"
+                    deletetblname = tblname + "D"
+                    
+                    #Rename the table to tableD
+                    os.rename(directoryPath + tblname, directoryPath + deletetblname)
+
+                    #Rename table_locks to table
+                    os.rename(directoryPath + locktblname, directoryPath + tblname)
+
+                    #Delete tableD
+                    os.remove(directoryPath + deletetblname)
+
+                    print("Transaction committed.")
+
+                else : 
+                    print("Transaction abort.")
 
 # ----------------------------------------------------------------------------
 # FUNCTION NAME:     ProcessTransactionCommand(commandsList)
