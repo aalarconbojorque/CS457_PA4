@@ -6,6 +6,7 @@
 CREATE DATABASE CS457_PA4;
 USE CS457_PA4;
 create table Flights(seat int, status int);
-insert into Flights values(22,0);
-insert into Flights values(23,1);
+insert into Flights values(22,0); -- seat 22 is available
+insert into Flights values(23,1); -- seat 23 is occupied
+select * from flights;
 .exit

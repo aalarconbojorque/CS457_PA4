@@ -17,6 +17,8 @@ import shutil
 
 # Global variable to keep track of the current DB in use
 GlobalCurrentDirectory = "CS457_PA4"
+StandardInputisActive = False
+CommandsList = []
 
 # A class to handle tableLocking metadata manipulation,
 class TableLock:
@@ -47,7 +49,9 @@ op = {'>': lambda x, y: x > y,
 def main():
 
     # List that holds all commands that will executed
+    global CommandsList
     CommandsList = []
+    global StandardInputisActive
     StandardInputisActive = False
 
     # There is NOT standard input file attached
@@ -1607,13 +1611,17 @@ def ReadCommandsFileInput():
 
     for line in FileInputLines:
         # Ignore lines that are blank or are comments
-        if line == '\r\n' or "--" in line or line == '\n':
+        if line == '\r\n' or line.startswith("--") or line == '\n':
             pass
         # Remove newline from current line and append to the commands list
         else:
             temp_line = line.replace('\r\n', '')
             temp_line = temp_line.replace('\t', '')
             temp_line = temp_line.replace('\n', '')
+
+            if temp_line.find("--") != -1 :
+                temp_line = ''.join(temp_line.partition(';')[0:2])
+
             FileInputCommands.append(temp_line)
 
     # Temporary variable to combine multi-line commands
