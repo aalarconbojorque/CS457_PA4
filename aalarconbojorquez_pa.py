@@ -7,7 +7,12 @@
 # MODIFICATION HISTORY:
 # Author             Date           Modification(s)
 # ----------------   -----------    ---------------
-# Andy Alarcon       2020-11-06     1.0 ... Setup environment using prior submission
+# Andy Alarcon       2020-11-15     1.0 ... Setup environment using prior submission
+# Andy Alarcon       2020-11-17     1.1 ... Added Transaction commands to parser
+# Andy Alarcon       2020-11-18     1.2 ... Added Transaction commands functionality
+# Andy Alarcon       2020-11-20     1.3 ... Made commands list and standard input global vars
+# Andy Alarcon       2020-11-22     1.4 ... Implemented Standard Input for transaction command
+# Andy Alarcon       2020-11-24     1.5 ... Fixed inline comments parsing bug
 # -----------------------------------------------------------------------------
 
 import sys
@@ -256,6 +261,7 @@ def BeginTranscationCommand():
                 CommandsList.pop(0)
             
 
+            #Check if the locked table was modified
             if currentLockedTable.dataModifed == True :
                 directoryPath = GlobalCurrentDirectory + "/"
                 tblname = currentLockedTable.tablename
@@ -276,9 +282,10 @@ def BeginTranscationCommand():
             else : 
                 print("Transaction abort.")
         
+        #Line by Line Input
         else :
             try:
-                LineInputCommand = str(input("Transaction--> "))
+                LineInputCommand = str(input("--> "))
                 CommitCommand = re.search(r'(?i)commit\s*;', LineInputCommand)
             except:
                 print("Invalid Input Please Try again")
@@ -297,7 +304,7 @@ def BeginTranscationCommand():
     
                         LineInputCommand = ''
                     while not LineInputCommand.endswith(';'):
-                        tempInput = str(input("Transaction--> "))
+                        tempInput = str(input("--> "))
                         CommitCommand = re.search(r'(?i)\s*commit\s*;', tempInput)
                         if CommitCommand :
                             break
@@ -387,7 +394,7 @@ def UpdateTransactionCommand(commandLine, currentLockedTable):
 
                         # Create a copy of the current table we want to modify but add _lock to the name
                         shutil.copyfile(GlobalCurrentDirectory + "/" + updateTableName, GlobalCurrentDirectory + "/" + lockTableName)
-                        print("LockCreated : " + lockTableName)
+                        #print("LockCreated : " + lockTableName)
 
                         # Set table access to True if we want to further modify it
                         currentLockedTable.CanAccess = True
@@ -403,7 +410,7 @@ def UpdateTransactionCommand(commandLine, currentLockedTable):
                     
                     #If it already exists and we are currently using it (creator)
                     else :
-                        print("Lock Already Created : " + lockTableName)
+                        #print("Lock Already Created : " + lockTableName)
 
                         #Replace the table name with tablename_lock to modify the data
                         commandLineTableReplaced = commandLine.replace(currentLockedTable.tablename, lockTableName)

@@ -14,6 +14,7 @@ commit;
 select * from flights;
 begin transaction;
 update flights set status = 0 where seat = 22;
+update flights set status = 0 where seat = 23;
 commit;
 select * from flights;
 begin transaction;
